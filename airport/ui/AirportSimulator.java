@@ -12,6 +12,23 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import airport.model.*;
+import com.sun.javafx.tk.ImageLoader;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PathTransition;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
+import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.Pane;
+import javafx.scene.shape.CubicCurveTo;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.util.Duration;
 
 
 public class AirportSimulator extends Application {
@@ -20,6 +37,8 @@ public class AirportSimulator extends Application {
     private LandingRequestWindow landReqWindow;
     private LandingQueueWindow landQueueWindow;
     private LandingList landingList;
+    private TerminalsList terminalList;
+    private Group group;
     
     @Override
     public void start(Stage stage) {
@@ -28,6 +47,7 @@ public class AirportSimulator extends Application {
         landQueueWindow = null;
         
         landingList = new LandingList();
+        terminalList = new TerminalsList();
         
         BorderPane root = new BorderPane();
         
@@ -52,10 +72,18 @@ public class AirportSimulator extends Application {
         
         menuBar.getMenus().addAll(fileMenu);
     
+        Pane canvas = new Pane();
+        group = new Group();
+        canvas.getChildren().add(group);
+
+        root.setCenter(canvas);
         
-        Group group = new Group();
-        root.setCenter(group);
-        Scene scene = new Scene(root, 700, 600, Color.GHOSTWHITE);
+        BackgroundImage myBI= new BackgroundImage(new Image("airport.jpg",1000,600,false,true),
+        BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
+          BackgroundSize.DEFAULT);
+        canvas.setBackground(new Background(myBI));
+        
+        Scene scene = new Scene(root, 1000, 600, Color.GHOSTWHITE);
         stage.setScene(scene);
         stage.setTitle("Airport simulator");
         stage.show();
@@ -123,7 +151,46 @@ public class AirportSimulator extends Application {
 
         @Override
         public void handle(ActionEvent event) {
-            System.out.println("Land clicked");
+            TerminalPosition terminal = terminalList.getEmptyTerminal();
+            
+            if(terminal != null && landingList.size() > 0) {
+                Airplane plane = landingList.pop();
+            
+                Path path = new Path();
+                path.getElements().add(new MoveTo(10,120));
+                path.getElements().add(new LineTo(910, 120));
+                path.getElements().add(new CubicCurveTo(910, 120, 980, 240, 910, 240));
+                path.getElements().add(new LineTo(terminal.getPosX(), terminal.getPosY()));
+                path.setOpacity(0.3);
+
+                ImageView selectedImage = new ImageView();   
+                //Image image1 = new Image("file:a.jpg");
+                Image image1 = new Image(AirportSimulator.class.getResourceAsStream("a.jpg"));
+
+
+                selectedImage.setImage(image1);
+
+                PathTransition pathTransition = new PathTransition();
+                pathTransition.setDuration(Duration.seconds(8.0));
+                pathTransition.setDelay(Duration.seconds(.5));
+                pathTransition.setPath(path);
+                pathTransition.setNode(selectedImage);
+                pathTransition.setOrientation(PathTransition.OrientationType.NONE);
+                pathTransition.setCycleCount(0);
+                pathTransition.setAutoReverse(false);
+
+                group.getChildren().addAll(selectedImage);
+                group.getChildren().add(path);
+                
+                terminal.setEmpty(false);
+
+                ParallelTransition parallelTransition =
+                 new ParallelTransition(pathTransition);
+                // selectedImage.setRotate(selectedImage.getRotate() + 45);
+                parallelTransition.play();  
+                
+                group.getChildren().remove(path);
+            }
         }
         
     }
