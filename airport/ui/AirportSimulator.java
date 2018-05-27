@@ -13,11 +13,14 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import airport.model.*;
 import com.sun.javafx.tk.ImageLoader;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.animation.ParallelTransition;
 import javafx.animation.PathTransition;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
@@ -37,8 +40,11 @@ public class AirportSimulator extends Application {
     private LandingRequestWindow landReqWindow;
     private LandingQueueWindow landQueueWindow;
     private LandingList landingList;
+    private LandedList landedList;
     private TerminalsList terminalList;
     private Group group;
+    
+    ImageView tempImage;
     
     @Override
     public void start(Stage stage) {
@@ -48,6 +54,8 @@ public class AirportSimulator extends Application {
         
         landingList = new LandingList();
         terminalList = new TerminalsList();
+        
+        landedList = new LandedList();
         
         BorderPane root = new BorderPane();
         
@@ -68,7 +76,10 @@ public class AirportSimulator extends Application {
         MenuItem takeOffItem = new MenuItem("Take Off");
         takeOffItem.setOnAction(new TakeOffAction());
         
-        fileMenu.getItems().addAll(landRequestItem, landQItem, landItem, takeOffItem);
+        MenuItem simulation = new MenuItem("Simulation");
+        simulation.setOnAction(new Simulation());
+        
+        fileMenu.getItems().addAll(simulation, landRequestItem, landQItem, landItem, takeOffItem);
         
         menuBar.getMenus().addAll(fileMenu);
     
@@ -82,6 +93,12 @@ public class AirportSimulator extends Application {
         BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,
           BackgroundSize.DEFAULT);
         canvas.setBackground(new Background(myBI));
+        
+        // ImageView selectedImage = new ImageView();   
+        tempImage = new ImageView();   
+        Image image1 = new Image(AirportSimulator.class.getResourceAsStream("a.jpg"));
+        tempImage.setImage(image1);
+        group.getChildren().addAll(tempImage);
         
         Scene scene = new Scene(root, 1000, 600, Color.GHOSTWHITE);
         stage.setScene(scene);
@@ -147,6 +164,39 @@ public class AirportSimulator extends Application {
         
     }
     
+    class Simulation implements EventHandler<ActionEvent>, Runnable {
+        
+        Thread thread;
+        
+        @Override
+        public void handle(ActionEvent event) {
+            thread = new Thread(this);
+            thread.start();
+        }
+
+        @Override
+        public void run() {
+            for(int i = 0; i < 100; i+=2) {
+                System.out.print(". ");
+                double newX = tempImage.getX() + 10;
+                double newY = tempImage.getY() + 10;
+                
+                tempImage.setX(i);
+                tempImage.setY(i);
+                
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(AirportSimulator.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+            }
+ 
+        }
+        
+    }
+    
+    
     class LandAction implements EventHandler<ActionEvent> {
 
         @Override
@@ -163,12 +213,26 @@ public class AirportSimulator extends Application {
                 path.getElements().add(new LineTo(terminal.getPosX(), terminal.getPosY()));
                 path.setOpacity(0.3);
 
-                ImageView selectedImage = new ImageView();   
-                //Image image1 = new Image("file:a.jpg");
+                // ImageView selectedImage = new ImageView();   
+                AirplaneImageView selectedImage = new AirplaneImageView(plane);   
+                
                 Image image1 = new Image(AirportSimulator.class.getResourceAsStream("a.jpg"));
-
+                
 
                 selectedImage.setImage(image1);
+                selectedImage.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                        AirplaneImageView view = (AirplaneImageView)event.getSource();
+                        Airplane plane = view.getPlane();
+                        System.out.println("Plane pressed " + plane.getFlightNumber());
+                        event.consume();
+                    }
+               });
+                
+                plane.setTerminal(terminal);
+                plane.setImage(selectedImage);
+                landedList.add(plane);
 
                 PathTransition pathTransition = new PathTransition();
                 pathTransition.setDuration(Duration.seconds(8.0));
